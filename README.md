@@ -9,10 +9,8 @@ Dotfiles
 
 ## Installation (optional)
 ```
-    $ cd ~
-    $ git clone git@github.com:wyde/dotfiles.git
-    $ mv ~/dotfiles/.bashrc ~/.bashrc
-    $ mv ~/dotfiles/.vimrc ~/.vimrc
+    $ cd $HOME
+    $ bash ./setup
 ```
 
 ## Changelog
