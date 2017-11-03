@@ -7,8 +7,8 @@ fi
 
 echo " update .bashrc"
 if [ -f ~/dotfiles/.bashrc ]; then
-    source ~/.bashrc
     cp ~/dotfiles/.bashrc ~/.bashrc
+    source ~/.bashrc
 fi
 
 echo " update .vimrc"
