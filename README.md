@@ -12,15 +12,16 @@ Dotfiles
     $ cd $HOME
     $ git clone git@github.com:wyde/dotfiles.git
     $ cd dotfiles
-    $ bash ./setup
+    $ bash ./setup.sh
 ```
-
-## Changelog
-0.1.20171101
 
 ## Todo
 - setup.sh
-- .tmux
+- tmux.conf
 
 ## License
 MIT
+
+## Changelog
+0.1.20171101
+0.2.20171103

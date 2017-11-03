@@ -1,134 +1,80 @@
-# .bashrc
+# the script is mainly borrow from Jeff Hull
+# visit his site on: http://engineerwithoutacause.com/show-current-virtualenv-on-bash-prompt.html
+RED='\[\033[31m\]'
+GREEN='\[\033[32m\]'
+YELLOW='\[\033[33m\]'
+BLUE='\[\033[34m\]'
+PURPLE='\[\033[35m\]'
+CYAN='\[\033[36m\]'
+WHITE='\[\033[37m\]'
+NIL='\[\033[00m\]'
 
-# Source global definitions
-if [ -f /etc/bashrc ]; then
-	. /etc/bashrc
-fi
+# Hostname styles
+FULL='\H'
+SHORT='\h'
 
-# Uncomment the following line if you don't like systemctl's auto-paging feature:
-# export SYSTEMD_PAGER=
+# System => color/hostname map:
+# UC: username color
+# LC: location/cwd color
+# HD: hostname display (\h vs \H)
+# Defaults:
+UC=$YELLOW
+HD=$GREEN$SHORT
+LC=$BLUE
 
-
-#################################################################################
-# bash_prompt
-
-# DESCRIPTION:
-#
-#   Set the bash prompt according to:
-#    * the active virtualenv
-#    * the branch/status of the current git repository
-#    * the return value of the previous command
-#    * the fact you just came from Windows and are used to having newlines in
-#      your prompts.
-#
-# USAGE:
-#
-#   1. Save this file as ~/.bash_prompt
-#   2. Add the following line to the end of your ~/.bashrc or ~/.bash_profile:
-#        . ~/.bash_prompt
-#
-# LINEAGE:
-#
-#   Based on work by woods
-#
-#   https://gist.github.com/31967
-
-# The various escape codes that we can use to color our prompt.
-        RED="\[\033[0;31m\]"
-     YELLOW="\[\033[1;33m\]"
-      GREEN="\[\033[0;32m\]"
-       BLUE="\[\033[1;34m\]"
-  LIGHT_RED="\[\033[1;31m\]"
-LIGHT_GREEN="\[\033[1;32m\]"
-      WHITE="\[\033[1;37m\]"
- LIGHT_GRAY="\[\033[0;37m\]"
- COLOR_NONE="\[\e[0m\]"
-
-# Detect whether the current directory is a git repository.
-function is_git_repository {
-  git branch > /dev/null 2>&1
-}
-
-# Determine the branch/state information for this git repository.
-function set_git_branch {
-  # Capture the output of the "git status" command.
-  git_status="$(git status 2> /dev/null)"
-
-  # Set color based on clean/staged/dirty.
-  if [[ ${git_status} =~ "working directory clean" ]]; then
-    state="${GREEN}"
-  elif [[ ${git_status} =~ "Changes to be committed" ]]; then
-    state="${YELLOW}"
-  else
-    state="${LIGHT_RED}"
-  fi
-
-  # Set arrow icon based on status against remote.
-  remote_pattern="# Your branch is (.*) of"
-  if [[ ${git_status} =~ ${remote_pattern} ]]; then
-    if [[ ${BASH_REMATCH[1]} == "ahead" ]]; then
-      remote="↑"
+# Prompt function because PROMPT_COMMAND is awesome
+function set_prompt() {
+    # show the host only and be done with it.
+    host="${HD}${NIL}"
+    
+    # Special vim-tab-like shortpath (~/folder/directory/foo => ~/f/d/foo)
+    _pwd=`pwd | sed "s#$HOME#~#"`
+    if [[ $_pwd == "~" ]]; then
+        _dirname=$_pwd
     else
-      remote="↓"
+        _dirname=`dirname "$_pwd" `
+        if [[ $_dirname == "/" ]]; then
+            _dirname=""
+        fi
+        _dirname="$_dirname/`basename "$_pwd"`"
     fi
-  else
-    remote=""
-  fi
-  diverge_pattern="# Your branch and (.*) have diverged"
-  if [[ ${git_status} =~ ${diverge_pattern} ]]; then
-    remote="↕"
-  fi
+    path="${LC}${_dirname}${NIL}"
+    myuser="${UC}\u${NIL}"
+    
+    # Dirtiness from:
+    # http://henrik.nyh.se/2008/12/git-dirty-prompt#comment-8325834
+    if git update-index -q --refresh 2>/dev/null; git diff-index --quiet --cached HEAD --ignore-submodules -- 2>/dev/null && git diff-files --quiet --ignore-submodules 2>/dev/null
+    then dirty=""
+    else
+        dirty="${RED}*${NIL}"
+    fi
+    _branch=$(git symbolic-ref HEAD 2>/dev/null)
+    _branch=${_branch#refs/heads/} # apparently faster than sed
+    branch="" # need this to clear it when we leave a repo
+    if [[ -n $_branch ]]; then
+        branch=" git:${NIL}${CYAN}${_branch}${dirty}${NIL}"
+    fi
+   
+    start="\n${PURPLE}#${NIL} "
 
-  # Get the name of the branch.
-  branch_pattern="^# On branch ([^${IFS}]*)"
-  if [[ ${git_status} =~ ${branch_pattern} ]]; then
-    branch=${BASH_REMATCH[1]}
-  fi
+    # Dollar/pound sign
+    end="\n${PURPLE}\$${NIL} "
+    
+    # Virtual Env
+    if [[ $VIRTUAL_ENV != "" ]]
+    then
+        venv=" ${RED}(${VIRTUAL_ENV##*/}) "
+    else
+        venv=''
+    fi
 
-  # Set the final branch string.
-  BRANCH="${state}(${branch})${remote}${COLOR_NONE} "
+    date=" [\D{%F %T}]"
+    
+    export PS1="${start}${venv}${myuser}@${host}:${path}${branch}${date}${end}"
 }
+export PROMPT_COMMAND=set_prompt
 
-# Return the prompt symbol to use, colorized based on the return value of the
-# previous command.
-function set_prompt_symbol () {
-  if test $1 -eq 0 ; then
-      PROMPT_SYMBOL="\$"
-  else
-      PROMPT_SYMBOL="${LIGHT_RED}\$${COLOR_NONE}"
-  fi
-}
+##########################################################################################
 
-# Determine active Python virtualenv details.
-function set_virtualenv () {
-  if test -z "$VIRTUAL_ENV" ; then
-      PYTHON_VIRTUALENV=""
-  else
-      PYTHON_VIRTUALENV="${BLUE}[`basename \"$VIRTUAL_ENV\"`]${COLOR_NONE} "
-  fi
-}
-
-# Set the full bash prompt.
-function set_bash_prompt () {
-  # Set the PROMPT_SYMBOL variable. We do this first so we don't lose the
-  # return value of the last command.
-  set_prompt_symbol $?
-
-  # Set the PYTHON_VIRTUALENV variable.
-  set_virtualenv
-
-  # Set the BRANCH variable.
-  if is_git_repository ; then
-    set_git_branch
-  else
-    BRANCH=''
-  fi
-
-  # Set the bash prompt variable.
-  PS1="
-${PYTHON_VIRTUALENV}${GREEN}\u@\h ${YELLOW}\w${COLOR_NONE} ${BRANCH}
-${PROMPT_SYMBOL} "
-}
-
-# Tell bash to execute this function just before displaying its prompt.
-PROMPT_COMMAND=set_bash_prompt
+# alias
+alias git="git --no-pager"
