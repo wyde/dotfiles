@@ -78,3 +78,8 @@ export PROMPT_COMMAND=set_prompt
 
 # alias
 alias git="git --no-pager"
+
+if [ -f /usr/bin/virtualenvwrapper.sh ]; then
+    echo " exporting env variable WORKON_HOME=~/.virtualenvs"
+    export WORKON_HOME=~/.virtualenvs
+fi
